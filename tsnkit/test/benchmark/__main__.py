@@ -10,14 +10,14 @@ from . import draw, killif, mute, print_output, str_flag
 from ... import core as utils
 from multiprocessing import Pool, cpu_count, Value, Process, Queue, Manager
 
-from ...algorithms import (at, cg, cp_wa, dt, i_ilp, i_omt, jrs_mc, jrs_nw, jrs_nw_l, jrs_wa, ls, ls_pl, ls_tb, smt_fr,
+from ...algorithms import (jrs_bwq, cg, cp_wa, dt, i_ilp, i_omt, jrs_mc, jrs_nw, jrs_nw_l, jrs_wa, ls, ls_pl, ls_tb, smt_fr,
                        smt_nw, smt_pr, smt_wa,rs)
 
 SCRIPT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DATASET_LOGS = pd.read_csv(SCRIPT_DIR + "/data/dataset_logs.csv")
 
 ALGO_DICT = {
-    "at": at,
+    "jrs_bwq": jrs_bwq,
     "cg": cg,
     "cp_wa": cp_wa,
     "dt": dt,
