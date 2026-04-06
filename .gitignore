@@ -4,7 +4,6 @@ build/
 dist/
 **/*.ipynb_checkpoints/
 *.py[cod]
-*.csv
 *.pyc
 *.err
 *.log
@@ -14,6 +13,7 @@ dist/
 *.egg-info
 *.pdf
 *.DS_Store
+*.png
 
 tsnkit/simulation/cython/*.c
 tsnkit/simulation/cython/*.so
