@@ -11,7 +11,7 @@ from ... import core as utils
 from multiprocessing import Pool, cpu_count, Value, Process, Queue, Manager
 
 from ...algorithms import (jrs_bwq, cg, cp_wa, dt, i_ilp, i_omt, jrs_mc, jrs_nw, jrs_nw_l, jrs_wa, ls, ls_pl, ls_tb, smt_fr,
-                       smt_nw, smt_pr, smt_wa,rs)
+                       smt_nw, smt_pr, smt_wa,sa)
 
 SCRIPT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DATASET_LOGS = pd.read_csv(SCRIPT_DIR + "/data/dataset_logs.csv")
@@ -34,7 +34,7 @@ ALGO_DICT = {
     "smt_nw": smt_nw,
     "smt_pr": smt_pr,
     "smt_wa": smt_wa,
-    "rs":rs
+    "sa":sa
 }
 
 
@@ -45,6 +45,12 @@ def parse():
     parser.add_argument("--ins", type=str, nargs="+", help="list of problem instances")
     parser.add_argument("-t", type=int, default=600, help="total timeout limit")
     parser.add_argument("-o", type=str, default="./", help="output path")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="number of workers used by each algorithm process (default: NUM_CORE_LIMIT)",
+    )
 
     utils.parse_command_line_constants(parser)
 
@@ -84,6 +90,7 @@ if __name__ == "__main__":
         ins = [ins[0]] * len(methods)
     utils.T_LIMIT = args.t
     output_affix = args.o
+    worker_count = args.workers if args.workers is not None else utils.NUM_CORE_LIMIT
 
     data_path = f"{SCRIPT_DIR}/data/"
 
@@ -158,14 +165,14 @@ if __name__ == "__main__":
         stats = alg(f"{task_param[0]}-{task_num}", path + "_task.csv", path + "_topo.csv", workers=workers)
         return stats.to_list()
 
-    with Pool(processes=max(1, cpu_count() // utils.NUM_CORE_LIMIT), maxtasksperchild=1, initializer=mute) as p:
+    with Pool(processes=max(1, cpu_count() // worker_count), maxtasksperchild=1, initializer=mute) as p:
         for task in tasks:
             p.apply_async(
                 run,
                 args=(
                     import_algorithm(task[0]).benchmark,
                     task,
-                    utils.NUM_CORE_LIMIT, # workers
+                    worker_count,
                     processes
                 ),
                 callback=store,

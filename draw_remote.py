@@ -24,7 +24,7 @@ METHOD_ORDER = [
     "ls_pl",
     "smt_pr",
     "dt",
-    "rs",
+    "sa",
 ]
 
 marker_dict = {
@@ -45,7 +45,7 @@ marker_dict = {
     "smt_nw": "X",
     "smt_fr": "X",
     "dt": ".",
-    "rs":"H",
+    "sa":"H",
 }
 
 dash_dict = {name: (2, 2) for name in METHOD_ORDER}

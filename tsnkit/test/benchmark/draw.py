@@ -9,11 +9,11 @@ SCRIPT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DATASET_LOGS = pd.read_csv(SCRIPT_DIR + "/data/dataset_logs.csv")
 
 METHOD_ORDER = ['smt_wa', 'smt_nw', 'jrs_wa', 'jrs_bwq', 'jrs_nw_l', 'ls', 'jrs_mc', 'i_ilp', 'i_omt', 'cg', 'jrs_nw',
-                'smt_fr', 'cp_wa', 'ls_tb', 'ls_pl', 'smt_pr', 'dt','rs']
+                'smt_fr', 'cp_wa', 'ls_tb', 'ls_pl', 'smt_pr', 'dt','sa']
 
 marker_dict = {'jrs_wa': 'o', 'jrs_mc': 'o', 'jrs_nw_l': '^', 'jrs_nw': '^', 'ls': 's', 'i_ilp': 's', 'cg': 'v',
                'smt_wa': 'D', 'jrs_bwq': 'D', 'cp_wa': '*', 'smt_pr': '*', 'i_omt': 'p', 'ls_tb': 'p', 'ls_pl': 'p',
-               'smt_nw': 'X', 'smt_fr': 'X', 'dt': '.','rs':'H'}
+               'smt_nw': 'X', 'smt_fr': 'X', 'dt': '.','sa':'H'}
 
 dash_dict = {name: (2, 2) for name in METHOD_ORDER}
 
