@@ -2,6 +2,7 @@ __pycache__/
 tsntest/
 build/
 dist/
+results/
 **/*.ipynb_checkpoints/
 *.py[cod]
 *.pyc

@@ -121,6 +121,8 @@ class sa:
         self.post_feasible_patience = 0
         self.elite_pool_size = 4
         self.max_focus_streams = 4
+        self.large_instance_mode = False
+        self.feasible_iteration_cap = 0
         self.rng = random.Random(self.seed)
 
         self.best_cost = math.inf
@@ -138,6 +140,14 @@ class sa:
         self.parallel_output_config = None
         self.task = utils.load_stream(task_path)
         self.net = utils.load_network(net_path)
+        stream_count = len(self.task.streams)
+
+        if stream_count >= 160:
+            self.max_candidate_paths = 2
+        elif stream_count >= 96:
+            self.max_candidate_paths = 3
+        else:
+            self.max_candidate_paths = 4
 
         self.task_routes = {
             stream: self.select_candidate_paths(stream) for stream in self.task.streams
@@ -146,17 +156,32 @@ class sa:
             10000.0,
             float(sum(stream.deadline for stream in self.task.streams)) * 2.0,
         )
-        if len(self.task.streams) <= 16:
-            self.max_iterations = max(220, len(self.task.streams) * 20)
-        elif len(self.task.streams) <= 32:
-            self.max_iterations = max(500, len(self.task.streams) * 40)
+        self.large_instance_mode = stream_count >= 96
+        if stream_count <= 16:
+            self.max_iterations = max(220, stream_count * 20)
+            self.feasible_iteration_cap = max(120, stream_count * 24)
+        elif stream_count <= 32:
+            self.max_iterations = max(500, stream_count * 40)
+            self.feasible_iteration_cap = max(220, stream_count * 20)
+        elif stream_count <= 96:
+            self.max_iterations = max(900, stream_count * 24)
+            self.feasible_iteration_cap = max(320, stream_count * 14)
+        elif stream_count <= 160:
+            self.max_iterations = max(900, stream_count * 12)
+            self.feasible_iteration_cap = max(420, stream_count * 8)
         else:
-            self.max_iterations = max(900, len(self.task.streams) * 80)
-        self.initial_temperature = max(5.0, float(len(self.task.streams)) * 2.0)
-        self.restart_period = max(40, len(self.task.streams) * 6)
-        self.stagnation_limit = max(90, len(self.task.streams) * 10)
-        self.use_incremental_eval = len(self.task.streams) >= 24
-        self.post_feasible_patience = max(8, len(self.task.streams) * 2)
+            self.max_iterations = max(1000, stream_count * 8)
+            self.feasible_iteration_cap = max(480, stream_count * 6)
+
+        self.initial_temperature = max(5.0, float(stream_count) * (1.2 if self.large_instance_mode else 2.0))
+        self.restart_period = max(32, stream_count * (2 if self.large_instance_mode else 6))
+        self.stagnation_limit = max(64, stream_count * (3 if self.large_instance_mode else 10))
+        self.use_incremental_eval = stream_count >= 24
+        self.post_feasible_patience = (
+            max(6, min(24, stream_count // 8))
+            if self.large_instance_mode
+            else max(8, stream_count * 2)
+        )
         self.failure_score = {stream: 0 for stream in self.task.streams}
         self.elite_states = []
 
@@ -341,7 +366,7 @@ class sa:
             if first_feasible_step is not None and step - first_feasible_step >= self.post_feasible_patience:
                 break
 
-            if self.best_cost < math.inf and step > len(self.task.streams) * 24:
+            if self.best_cost < math.inf and step > self.feasible_iteration_cap:
                 break
 
         run_time = utils.time_log() - start_time
@@ -579,6 +604,21 @@ class sa:
         next_paths = dict(path_choice)
 
         focus_streams = self.get_focus_streams(failed_streams)
+
+        if self.large_instance_mode:
+            action = self.rng.random()
+            if action < 0.55:
+                self.mutate_paths(next_paths, focus_streams, max_mutations=1)
+            elif action < 0.82 and len(next_order) > 1:
+                self.promote_streams(
+                    next_order,
+                    focus_streams,
+                    front_window=max(1, len(next_order) // 5),
+                )
+            else:
+                self.local_swap(next_order, focus_streams)
+            return next_order, next_paths
+
         action = self.rng.random()
         if action < 0.20 and len(next_order) > 1:
             left, right = sorted(self.rng.sample(range(len(next_order)), 2))
@@ -596,6 +636,23 @@ class sa:
             self.mutate_paths(next_paths, focus_streams, max_mutations=3)
 
         return next_order, next_paths
+
+    def local_swap(self, order: List[utils.Stream], focus_streams: List[utils.Stream]) -> None:
+        if len(order) <= 1:
+            return
+        if focus_streams and focus_streams[0] in order:
+            anchor_index = order.index(focus_streams[0])
+        else:
+            anchor_index = self.rng.randrange(len(order))
+        radius = min(6, len(order) - 1)
+        left = max(0, anchor_index - radius)
+        right = min(len(order) - 1, anchor_index + radius)
+        if left == right:
+            return
+        swap_index = self.rng.randint(left, right)
+        if swap_index == anchor_index:
+            swap_index = left if swap_index < right else right
+        order[anchor_index], order[swap_index] = order[swap_index], order[anchor_index]
 
     def get_focus_streams(self, failed_streams: List[utils.Stream]) -> List[utils.Stream]:
         if failed_streams:
